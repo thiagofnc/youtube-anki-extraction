@@ -1,0 +1,5 @@
+flask
+youtube-transcript-api
+fugashi[unidic-lite]
+genanki
+requests
