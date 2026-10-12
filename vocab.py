@@ -9,9 +9,12 @@ from urllib.parse import urlparse, parse_qs
 
 import fugashi
 import requests
-from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
+from youtube_transcript_api import (YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled,
+                                    IpBlocked, RequestBlocked, VideoUnavailable)
 
 INDEX_PATH = Path(__file__).parent / "data" / "jmdict_index.json.gz"
+# Subtitles are cached per video so re-extracting never hits YouTube again (it rate-limits repeat requests).
+TRANSCRIPT_CACHE = Path(__file__).parent / "data" / "transcripts"
 
 # Parts of speech (UniDic pos1) that can carry real vocabulary.
 CONTENT_POS = {"名詞", "動詞", "形容詞", "形状詞", "副詞"}
@@ -51,6 +54,7 @@ class Card:
     meaning: str
     sentence: str
     count: int
+    surface: str  # form as it appears in `sentence`, used to highlight it in the UI
 
 
 class ExtractionError(Exception):
@@ -99,15 +103,26 @@ def fetch_preview(url: str) -> dict:
 
 
 def fetch_transcript(video_id: str) -> list[str]:
+    cache_file = TRANSCRIPT_CACHE / f"{video_id}.json"
+    if cache_file.exists():
+        return json.loads(cache_file.read_text(encoding="utf-8"))
     try:
         transcripts = YouTubeTranscriptApi().list(video_id)
         # Prefers manually created subtitles over auto-generated ones.
         transcript = transcripts.find_transcript(["ja", "ja-JP"])
-        return [s.text for s in transcript.fetch() if s.text.strip()]
+        lines = [s.text for s in transcript.fetch() if s.text.strip()]
     except (NoTranscriptFound, TranscriptsDisabled):
-        raise ExtractionError("This video has no Japanese subtitles (manual or auto-generated).")
+        raise ExtractionError("This video has no Japanese subtitles, manual or auto-generated. Try another video.")
+    except VideoUnavailable:
+        raise ExtractionError("This video is unavailable. It may be private, deleted or region-locked.")
+    except (IpBlocked, RequestBlocked):
+        raise ExtractionError("YouTube is temporarily blocking subtitle downloads from this network, "
+                              "usually after many requests. Wait a while, then try again.")
     except Exception as e:
-        raise ExtractionError(f"Could not download subtitles: {e}")
+        raise ExtractionError(f"Couldn’t download the subtitles ({type(e).__name__}). Try again in a moment.")
+    TRANSCRIPT_CACHE.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(lines, ensure_ascii=False), encoding="utf-8")
+    return lines
 
 
 # ---------------------------------------------------------------- Dictionary
@@ -202,14 +217,14 @@ def match_compound(tokens: list, start: int) -> tuple[int, str, str, dict] | Non
 def extract_cards(lines: list[str]) -> list[Card]:
     cards: dict[str, Card] = {}
 
-    def add(written: str, kana: str, entry: dict, sentence: str):
+    def add(written: str, kana: str, entry: dict, sentence: str, surface: str):
         # Keep katakana for loanwords (ラーメン), hiragana otherwise.
         reading = next((r for r in (kana, to_hiragana(kana)) if r in entry["r"]), entry["r"][0])
         key = f"{written}|{reading}"
         if key in cards:
             cards[key].count += 1
         else:
-            cards[key] = Card(written, reading, format_meaning(entry), sentence, 1)
+            cards[key] = Card(written, reading, format_meaning(entry), sentence, 1, surface)
 
     for line in lines:
         line = line.replace("\n", " ").strip()
@@ -223,7 +238,7 @@ def extract_cards(lines: list[str]) -> list[Card]:
             compound = match_compound(tokens, i)
             if compound:
                 end, written, kana, entry = compound
-                add(written, kana, entry, line)
+                add(written, kana, entry, line, written)
                 i = end
                 continue
             token, prev = tokens[i], tokens[i - 1] if i else None
@@ -233,7 +248,7 @@ def extract_cards(lines: list[str]) -> list[Card]:
                 lemma = (f.lemma or "").split("-")[0]
                 entry = lookup(written, lemma, f.kanaBase or "")
                 if entry:
-                    add(written, f.kanaBase or "", entry, line)
+                    add(written, f.kanaBase or "", entry, line, token.surface)
             i += 1
     return sorted(cards.values(), key=lambda c: -c.count)
 

@@ -2,134 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>YouTube → Anki (Japanese)</title>
-  <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-    input[type=text] { width: 70%; padding: .4rem; }
-    button { padding: .4rem .8rem; }
-    #preview img { width: 320px; display: block; margin: .5rem 0; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-    td, th { border-bottom: 1px solid #ddd; padding: .3rem .5rem; text-align: left; vertical-align: top; }
-    td.word { font-size: 1.3rem; white-space: nowrap; }
-    td.sentence { color: #777; font-size: .85rem; }
-    .error { color: #c00; }
-    .hidden { display: none; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12141b" media="(prefers-color-scheme: dark)">
+  <title>単語帳 – Japanese vocabulary from YouTube</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://i.ytimg.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Source+Sans+3:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
 <body>
-  <h1>YouTube → Anki (Japanese)</h1>
+  <header class="nav">
+    <a class="brand" href="/" lang="ja" translate="no">単語帳</a>
+    <a href="https://github.com/thiagofnc/youtube-anki-extraction#chrome-extension" target="_blank" rel="noopener">Chrome extension</a>
+  </header>
 
-  <form id="url-form">
-    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." required>
-    <button type="submit">Load</button>
-  </form>
-  <p id="status"></p>
+  <main class="page">
+    <section class="hero">
+      <h1 class="hero-title">Every word from the video, ready for Anki.</h1>
+      <p class="lede">Paste a YouTube link. The Japanese subtitles become flashcards with readings, meanings and the line each word came from. Particles and grammar are left out.</p>
 
-  <div id="preview" class="hidden">
-    <img id="thumb" alt="">
-    <strong id="title"></strong> <span id="author"></span>
-    <p><button id="extract-btn">Extract vocabulary</button></p>
-  </div>
+      <form id="url-form" class="url-form">
+        <label class="visually-hidden" for="url">YouTube link</label>
+        <input type="url" id="url" name="url" placeholder="Paste a YouTube link, e.g. https://youtu.be/…"
+               autocomplete="off" spellcheck="false" required aria-describedby="url-error">
+        <button type="submit" id="load-btn" class="primary">Load video</button>
+      </form>
+      <p id="url-error" class="field-error" role="alert"></p>
+      <p class="hint">Works with any video that has Japanese subtitles, including auto-generated ones.</p>
+    </section>
 
-  <div id="results" class="hidden">
-    <p>
-      <span id="count"></span>
-      <button id="toggle-all">Select / deselect all</button>
-      <button data-format="apkg" class="export">Download Anki deck (.apkg)</button>
-      <button data-format="tsv" class="export">Download TSV</button>
-    </p>
-    <table>
-      <thead><tr><th></th><th>Word</th><th>Reading</th><th>Meaning</th><th>Count</th><th>Example</th></tr></thead>
-      <tbody id="cards"></tbody>
-    </table>
-  </div>
+    <figure class="sample" aria-labelledby="sample-caption">
+      <ul class="word-list" aria-hidden="true">
+        <li><div class="word"><span class="tick"></span><span class="headword" lang="ja"><ruby>予報<rt>よほう</rt></ruby></span><div class="body"><div class="meaning">forecast; prediction</div><p class="sentence" lang="ja">明日の<mark>予報</mark>では雨が降るそうです</p></div><span class="seen">×6</span></div></li>
+        <li><div class="word"><span class="tick"></span><span class="headword" lang="ja"><ruby>続く<rt>つづく</rt></ruby></span><div class="body"><div class="meaning"><ol><li>to continue; to last</li><li>to occur again and again</li></ol></div><p class="sentence" lang="ja">晴れた日が<mark>続い</mark>ています</p></div><span class="seen">×4</span></div></li>
+        <li><div class="word"><span class="tick"></span><span class="headword" lang="ja"><ruby>気温<rt>きおん</rt></ruby></span><div class="body"><div class="meaning">temperature (air)</div><p class="sentence" lang="ja">午後は<mark>気温</mark>が上がります</p></div><span class="seen">×3</span></div></li>
+      </ul>
+      <figcaption id="sample-caption">One card per word: the word on the front; its reading, meaning and example line on the back.</figcaption>
+    </figure>
 
-<script>
-const $ = id => document.getElementById(id);
-let video = null, cards = [];
+    <section id="video" class="video" hidden aria-labelledby="video-title">
+      <a id="video-link" target="_blank" rel="noopener" tabindex="-1"><img id="thumb" alt="" width="240" height="135"></a>
+      <div>
+        <h2><a id="video-title" target="_blank" rel="noopener"></a></h2>
+        <p id="channel" class="channel"></p>
+        <button id="extract-btn" class="primary">Extract vocabulary</button>
+      </div>
+    </section>
 
-function setStatus(msg, isError = false) {
-  $('status').textContent = msg;
-  $('status').className = isError ? 'error' : '';
-}
+    <div role="status" aria-live="polite">
+      <p id="status" class="status"></p>
+      <div id="progress" class="progress" hidden></div>
+    </div>
 
-async function post(path, body) {
-  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res;
-}
+    <section id="results" class="results" hidden aria-label="Vocabulary">
+      <div class="toolbar">
+        <span id="count" class="count"></span>
+        <input type="search" id="filter" name="filter" autocomplete="off" placeholder="Filter words or meanings…" aria-label="Filter words or meanings">
+        <div class="selection">
+          <button id="select-all" class="quiet">Select all</button>
+          <button id="select-none" class="quiet">Clear</button>
+        </div>
+        <div class="exports">
+          <button id="export-tsv" data-format="tsv">TSV</button>
+          <button id="export-apkg" data-format="apkg" class="primary">Download Anki deck</button>
+        </div>
+      </div>
+      <ul id="word-list" class="word-list"></ul>
+      <p id="no-match" class="empty" hidden>No words match that filter. Clear the filter to see every word.</p>
+    </section>
+  </main>
 
-$('url-form').onsubmit = async e => {
-  e.preventDefault();
-  $('preview').classList.add('hidden');
-  $('results').classList.add('hidden');
-  setStatus('Loading video…');
-  try {
-    video = await (await post('/api/preview', { url: $('url').value })).json();
-    $('thumb').src = video.thumbnail;
-    $('title').textContent = video.title;
-    $('author').textContent = `— ${video.author}`;
-    $('preview').classList.remove('hidden');
-    setStatus('');
-  } catch (err) { setStatus(err.message, true); }
-};
-
-$('extract-btn').onclick = async () => {
-  setStatus('Downloading subtitles and extracting vocabulary…');
-  $('extract-btn').disabled = true;
-  try {
-    cards = (await (await post('/api/extract', { url: video.id })).json()).cards;
-    renderCards();
-    setStatus('');
-  } catch (err) { setStatus(err.message, true); }
-  $('extract-btn').disabled = false;
-};
-
-function renderCards() {
-  const tbody = $('cards');
-  tbody.innerHTML = '';
-  cards.forEach((c, i) => {
-    const tr = document.createElement('tr');
-    for (const [cls, text] of [['', ''], ['word', c.word], ['', c.reading], ['', c.meaning], ['', c.count], ['sentence', c.sentence]]) {
-      const td = document.createElement('td');
-      td.className = cls;
-      td.textContent = text;
-      tr.appendChild(td);
-    }
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = true; cb.dataset.index = i;
-    cb.onchange = updateCount;
-    tr.firstChild.appendChild(cb);
-    tbody.appendChild(tr);
-  });
-  $('results').classList.remove('hidden');
-  updateCount();
-}
-
-const checkboxes = () => [...document.querySelectorAll('#cards input[type=checkbox]')];
-const selectedCards = () => checkboxes().filter(cb => cb.checked).map(cb => cards[cb.dataset.index]);
-
-function updateCount() {
-  $('count').textContent = `${selectedCards().length} of ${cards.length} cards selected`;
-}
-
-$('toggle-all').onclick = () => {
-  const allChecked = checkboxes().every(cb => cb.checked);
-  checkboxes().forEach(cb => cb.checked = !allChecked);
-  updateCount();
-};
-
-document.querySelectorAll('.export').forEach(btn => btn.onclick = async () => {
-  try {
-    const res = await post('/api/export', { cards: selectedCards(), title: video.title, format: btn.dataset.format });
-    const disposition = res.headers.get('Content-Disposition') || '';
-    const name = disposition.match(/filename\*=UTF-8''([^;]+)/)?.[1] || disposition.match(/filename="?([^";]+)/)?.[1];
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(await res.blob());
-    a.download = name ? decodeURIComponent(name) : `vocab.${btn.dataset.format}`;
-    a.click();
-  } catch (err) { setStatus(err.message, true); }
-});
-</script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,161 @@
+/* Same tokens as the web app (static/app.css), sized for a 420px popup. */
+:root {
+  --paper: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #1b2033;
+  --ink-soft: #5c6274;
+  --rule: #dfe2e9;
+  --accent: #2f3f94;
+  --accent-ink: #ffffff;
+  --marker: #fbe68a;
+  --danger: #a8231c;
+
+  --font-ui: "Source Sans 3", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  --font-word: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+
+  --radius: 6px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12141b;
+    --surface: #1a1d26;
+    --ink: #e6e8ef;
+    --ink-soft: #9ba1b3;
+    --rule: #2b2f3c;
+    --accent: #9aabf5;
+    --accent-ink: #12141b;
+    --marker: rgba(246, 214, 92, 0.32);
+    --danger: #f08a83;
+    color-scheme: dark;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  width: 420px;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+header { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 16px 0; }
+header h1 { margin: 0; font: 700 20px/1 var(--font-word); letter-spacing: 0.04em; }
+header a { color: var(--accent); font-size: 13px; text-decoration: none; }
+header a:hover { text-decoration: underline; }
+
+.panel { padding: 12px 16px 16px; }
+
+/* ---------- Video ---------- */
+.video { display: grid; grid-template-columns: 128px 1fr; gap: 12px; align-items: start; }
+.video img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; display: block; }
+.video h2 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.video .channel { margin: 2px 0 0; color: var(--ink-soft); font-size: 13px; }
+
+/* ---------- Controls ---------- */
+button {
+  height: 34px;
+  padding: 0 14px;
+  font: 600 14px var(--font-ui);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+button:hover:not(:disabled) { border-color: var(--ink-soft); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.primary:hover:not(:disabled) { filter: brightness(1.12); border-color: var(--accent); }
+button.quiet { border-color: transparent; background: none; color: var(--accent); padding: 0 6px; }
+button.quiet:hover:not(:disabled) { border-color: transparent; text-decoration: underline; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.wide { width: 100%; margin-top: 12px; }
+
+input[type="search"] {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+input::placeholder { color: var(--ink-soft); opacity: 0.8; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Status ---------- */
+.status { margin: 12px 0 0; color: var(--ink-soft); }
+.status:empty { margin: 0; }
+.status.error { color: var(--danger); }
+.status code { font-size: 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; }
+.progress { height: 2px; margin-top: 8px; background: var(--rule); overflow: hidden; }
+.progress::after {
+  content: "";
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--accent);
+  animation: progress 1.2s ease-in-out infinite;
+}
+@keyframes progress { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+/* ---------- Results ---------- */
+.toolbar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.toolbar .count { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.toolbar .selection { display: flex; }
+.toolbar input[type="search"] { grid-column: 1 / -1; }
+.toolbar .exports { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+
+.word-list { list-style: none; margin: 0; padding: 0 16px; max-height: 340px; overflow-y: auto; }
+.word-list > li { border-bottom: 1px solid var(--rule); content-visibility: auto; contain-intrinsic-size: auto 96px; }
+.word-list > li:last-child { border-bottom: 0; }
+
+.word {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 2px 12px;
+  align-items: baseline;
+  padding: 12px 0 10px;
+  cursor: pointer;
+}
+/* Checkbox lines up with the kanji, below the furigana line. */
+.word input { margin: 19px 0 0; width: 16px; height: 16px; accent-color: var(--accent); align-self: start; cursor: pointer; }
+.word .body { grid-column: 2 / -1; }
+
+.headword { font: 500 22px/1.3 var(--font-word); }
+.headword:not(:has(ruby)) { padding-top: 13px; }
+.headword rt { font: 400 10px var(--font-ui); color: var(--ink-soft); letter-spacing: 0.05em; padding-bottom: 1px; }
+
+.meaning ol { margin: 0; padding: 0; list-style: none; counter-reset: sense; }
+.meaning li { counter-increment: sense; display: grid; grid-template-columns: 1.1em 1fr; align-items: baseline; }
+.meaning li::before { content: counter(sense); color: var(--ink-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sentence { margin: 3px 0 0; font-size: 13px; color: var(--ink-soft); }
+.sentence mark { color: var(--ink); background: linear-gradient(transparent 55%, var(--marker) 55%); padding: 0 1px; }
+
+.seen { color: var(--ink-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.word.off .headword, .word.off .meaning, .word.off .sentence { opacity: 0.4; }
+
+.empty { padding: 16px; margin: 0; color: var(--ink-soft); }
+
+[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::after { animation: none; width: 100%; opacity: 0.4; }
+}

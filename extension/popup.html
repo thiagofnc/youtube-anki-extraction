@@ -2,36 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <style>
-    body { font-family: sans-serif; width: 520px; margin: .75rem; font-size: 13px; }
-    #thumb { width: 100%; display: block; margin-bottom: .4rem; }
-    button { padding: .3rem .6rem; margin: .2rem .2rem .2rem 0; }
-    #cards-wrap { max-height: 360px; overflow-y: auto; }
-    table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
-    td { border-bottom: 1px solid #ddd; padding: .25rem .4rem; vertical-align: top; }
-    td.word { font-size: 1.15rem; white-space: nowrap; }
-    .error { color: #c00; }
-    .hidden { display: none; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Source+Sans+3:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <p id="status">Loading…</p>
+  <header>
+    <h1 lang="ja" translate="no">単語帳</h1>
+    <a id="full-page" href="#" target="_blank" hidden>Open full page</a>
+  </header>
 
-  <div id="preview" class="hidden">
-    <img id="thumb" alt="">
-    <strong id="title"></strong> <span id="author"></span>
-    <p><button id="extract-btn">Extract vocabulary</button></p>
-  </div>
+  <div class="panel">
+    <section id="video" class="video" hidden aria-labelledby="video-title">
+      <img id="thumb" alt="" width="128" height="72">
+      <div>
+        <h2 id="video-title"></h2>
+        <p id="channel" class="channel"></p>
+      </div>
+    </section>
+    <button id="extract-btn" class="primary wide" hidden>Extract vocabulary</button>
 
-  <div id="results" class="hidden">
-    <span id="count"></span><br>
-    <button id="toggle-all">Select / deselect all</button>
-    <button data-format="apkg" class="export">Download .apkg</button>
-    <button data-format="tsv" class="export">Download TSV</button>
-    <div id="cards-wrap">
-      <table><tbody id="cards"></tbody></table>
+    <div role="status" aria-live="polite">
+      <p id="status" class="status">Loading…</p>
+      <div id="progress" class="progress" hidden></div>
     </div>
   </div>
+
+  <section id="results" hidden aria-label="Vocabulary">
+    <div class="toolbar">
+      <span id="count" class="count"></span>
+      <div class="selection">
+        <button id="select-all" class="quiet">Select all</button>
+        <button id="select-none" class="quiet">Clear</button>
+      </div>
+      <input type="search" id="filter" name="filter" autocomplete="off" placeholder="Filter words or meanings…" aria-label="Filter words or meanings">
+      <div class="exports">
+        <button id="export-tsv" data-format="tsv">TSV</button>
+        <button id="export-apkg" data-format="apkg" class="primary">Download Anki deck</button>
+      </div>
+    </div>
+    <ul id="word-list" class="word-list"></ul>
+    <p id="no-match" class="empty" hidden>No words match that filter. Clear the filter to see every word.</p>
+  </section>
 
   <script src="popup.js"></script>
 </body>
