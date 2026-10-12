@@ -122,7 +122,8 @@ $('toggle-all').onclick = () => {
 document.querySelectorAll('.export').forEach(btn => btn.onclick = async () => {
   try {
     const res = await post('/api/export', { cards: selectedCards(), title: video.title, format: btn.dataset.format });
-    const name = (res.headers.get('Content-Disposition') || '').match(/filename\*?=(?:UTF-8'')?"?([^";]+)/)?.[1];
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const name = disposition.match(/filename\*=UTF-8''([^;]+)/)?.[1] || disposition.match(/filename="?([^";]+)/)?.[1];
     const a = document.createElement('a');
     a.href = URL.createObjectURL(await res.blob());
     a.download = name ? decodeURIComponent(name) : `vocab.${btn.dataset.format}`;

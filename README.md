@@ -19,6 +19,18 @@ python setup_dictionary.py    # one-time: downloads JMdict and builds data/jmdic
 python app.py                 # http://127.0.0.1:5000
 ```
 
+## Chrome extension
+
+The `extension/` folder is a popup that extracts vocabulary from the YouTube video in the current
+tab. It talks to the local server, so keep `python app.py` running.
+
+1. Open `chrome://extensions` and enable **Developer mode**.
+2. Click **Load unpacked** and select the `extension/` folder.
+3. Open a YouTube video and click the extension icon.
+
+Extracted cards are cached per video for the browser session, so closing the popup mid-way
+doesn't lose them.
+
 ## How vocabulary is filtered
 
 1. Subtitles are tokenized with MeCab (fugashi + UniDic) and each word is reduced to its dictionary form.

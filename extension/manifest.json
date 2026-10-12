@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube → Anki (Japanese)",
+  "version": "0.1.0",
+  "description": "Extract Japanese vocabulary cards from the YouTube video you're watching.",
+  "permissions": ["activeTab", "downloads", "storage"],
+  "host_permissions": ["http://127.0.0.1:5000/*"],
+  "action": {
+    "default_title": "Extract vocabulary",
+    "default_popup": "popup.html"
+  }
+}
